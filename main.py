@@ -34,6 +34,8 @@ from util import string_contains_any
 import wsol
 import wsol.method
 
+from wsol.nts import net
+from torch.optim.lr_scheduler import MultiStepLR
 
 def set_random_seed(seed):
     if seed is None:
@@ -77,15 +79,21 @@ class Trainer(object):
     }
 
     def __init__(self):
-        self.args = get_configs()               #get args
+        self.args = get_configs()               # get args
         set_random_seed(self.args.seed)
         print(self.args)
         self.performance_meters = self._set_performance_meters()
         self.reporter = self.args.reporter
-        self.model = self._set_model()          #init model
-        self.cross_entropy_loss = nn.CrossEntropyLoss().cuda()
-        self.optimizer = self._set_optimizer()
-        self.loaders = get_data_loader(
+        self.model = self._set_model()          # init model
+        self.cross_entropy_loss = nn.CrossEntropyLoss().cuda()  
+
+        if self.args.wsol_method == 'nts':
+            self.optimizer = self._set_optimizer()[0]
+            self.schedulers = self._set_optimizer()[1]
+        else:
+            self.optimizer = self._set_optimizer()  
+
+        self.loaders = get_data_loader(         # dataloader
             data_roots=self.args.data_paths,
             metadata_root=self.args.metadata_root,
             batch_size=self.args.batch_size,
@@ -113,55 +121,87 @@ class Trainer(object):
     def _set_model(self):
         num_classes = self._NUM_CLASSES_MAPPING[self.args.dataset_name]
         print("Loading model {}".format(self.args.architecture))
-        model = wsol.__dict__[self.args.architecture](
-            dataset_name=self.args.dataset_name,
-            architecture_type=self.args.architecture_type,
-            pretrained=self.args.pretrained,
-            num_classes=num_classes,
-            large_feature_map=self.args.large_feature_map,
-            pretrained_path=self.args.pretrained_path,
-            adl_drop_rate=self.args.adl_drop_rate,
-            adl_drop_threshold=self.args.adl_threshold,
-            acol_drop_threshold=self.args.acol_threshold)
+        
+        if self.args.wsol_method == 'nts':
+            model = net.attention_net()
+        else:
+            model = wsol.__dict__[self.args.architecture](
+                dataset_name=self.args.dataset_name,
+                architecture_type=self.args.architecture_type,
+                pretrained=self.args.pretrained,
+                num_classes=num_classes,
+                large_feature_map=self.args.large_feature_map,
+                pretrained_path=self.args.pretrained_path,
+                adl_drop_rate=self.args.adl_drop_rate,
+                adl_drop_threshold=self.args.adl_threshold,
+                acol_drop_threshold=self.args.acol_threshold)
         model = model.cuda()
         print(model)
         return model
 
     def _set_optimizer(self):
-        param_features = []
-        param_classifiers = []
+        if self.args.wsol_method == 'nts':
+            raw_parameters = list(self.model.pretrained_model.parameters())
+            part_parameters = list(self.model.proposal_net.parameters())
+            concat_parameters = list(self.model.concat_net.parameters())
+            partcls_parameters = list(self.model.partcls_net.parameters())
+            raw_optimizer = torch.optim.SGD(raw_parameters, lr=self.args.lr, momentum=self.args.momentum, weight_decay=self.args.weight_decay)
+            concat_optimizer = torch.optim.SGD(concat_parameters, lr=self.args.lr, momentum=self.args.momentum, weight_decay=self.args.weight_decay)
+            part_optimizer = torch.optim.SGD(part_parameters, lr=self.args.lr, momentum=self.args.momentum, weight_decay=self.args.weight_decay)
+            partcls_optimizer = torch.optim.SGD(partcls_parameters, lr=self.args.lr, momentum=self.args.momentum, weight_decay=self.args.weight_decay)
+            opter = [raw_optimizer, concat_optimizer, part_optimizer, partcls_optimizer]
+            schedulers = [MultiStepLR(raw_optimizer, milestones=[60, 100], gamma=0.1),
+                            MultiStepLR(concat_optimizer, milestones=[60, 100], gamma=0.1),
+                            MultiStepLR(part_optimizer, milestones=[60, 100], gamma=0.1),
+                            MultiStepLR(partcls_optimizer, milestones=[60, 100], gamma=0.1)]
+            return opter, schedulers
+        else:
+            param_features = []
+            param_classifiers = []
 
-        def param_features_substring_list(architecture):
-            for key in self._FEATURE_PARAM_LAYER_PATTERNS:
-                if architecture.startswith(key):
-                    return self._FEATURE_PARAM_LAYER_PATTERNS[key]
-            raise KeyError("Fail to recognize the architecture {}"
-                           .format(self.args.architecture))
+            def param_features_substring_list(architecture):
+                for key in self._FEATURE_PARAM_LAYER_PATTERNS:
+                    if architecture.startswith(key):
+                        return self._FEATURE_PARAM_LAYER_PATTERNS[key]
+                raise KeyError("Fail to recognize the architecture {}"
+                            .format(self.args.architecture))
 
-        for name, parameter in self.model.named_parameters():
-            if string_contains_any(
-                    name,
-                    param_features_substring_list(self.args.architecture)):
-                if self.args.architecture in ('vgg16', 'inception_v3'):
-                    param_features.append(parameter)
-                elif self.args.architecture == 'resnet50':
-                    param_classifiers.append(parameter)
-            else:
-                if self.args.architecture in ('vgg16', 'inception_v3'):
-                    param_classifiers.append(parameter)
-                elif self.args.architecture == 'resnet50':
-                    param_features.append(parameter)
+            for name, parameter in self.model.named_parameters():
+                if string_contains_any(
+                        name,
+                        param_features_substring_list(self.args.architecture)):
+                    if self.args.architecture in ('vgg16', 'inception_v3'):
+                        param_features.append(parameter)
+                    elif self.args.architecture == 'resnet50':
+                        param_classifiers.append(parameter)
+                else:
+                    if self.args.architecture in ('vgg16', 'inception_v3'):
+                        param_classifiers.append(parameter)
+                    elif self.args.architecture == 'resnet50':
+                        param_features.append(parameter)
 
-        optimizer = torch.optim.SGD([
-            {'params': param_features, 'lr': self.args.lr},
-            {'params': param_classifiers,
-             'lr': self.args.lr * self.args.lr_classifier_ratio}],
-            momentum=self.args.momentum,
-            weight_decay=self.args.weight_decay,
-            nesterov=True)
-        return optimizer
+            optimizer = torch.optim.SGD([
+                {'params': param_features, 'lr': self.args.lr},
+                {'params': param_classifiers,
+                'lr': self.args.lr * self.args.lr_classifier_ratio}],
+                momentum=self.args.momentum,
+                weight_decay=self.args.weight_decay,
+                nesterov=True)
+            return optimizer
 
     def _wsol_training(self, images, target):
+        if self.args.wsol_method == 'nts':
+            raw_logits, concat_logits, part_logits, _, top_n_prob = self.model(images)
+            part_loss = net.list_loss(part_logits.view(self.args.batch_size * self.args.PROPOSAL_NUM, -1),
+                                        target.unsqueeze(1).repeat(1, self.args.PROPOSAL_NUM).view(-1)).view(batch_size, PROPOSAL_NUM)
+            raw_loss = self.cross_entropy_loss(raw_logits, target)
+            concat_loss = self.cross_entropy_loss(concat_logits, target)
+            rank_loss = net.ranking_loss(top_n_prob, part_loss)
+            partcls_loss = self.cross_entropy_loss(part_logits.view(self.args.batch_size * self.args.PROPOSAL_NUM, -1),
+                                    target.unsqueeze(1).repeat(1, self.args.PROPOSAL_NUM).view(-1))
+            loss = raw_loss + rank_loss + concat_loss + partcls_loss
+            return concat_logits, loss
+
         if (self.args.wsol_method == 'cutmix' and
                 self.args.cutmix_prob > np.random.rand(1) and
                 self.args.cutmix_beta > 0):
@@ -192,6 +232,11 @@ class Trainer(object):
         self.model.train()
         loader = self.loaders[split]
 
+        #for nts-net
+        if self.args.wsol_method == 'nts':
+            for scheduler in self.schedulers:
+                scheduler.step()
+
         total_loss = 0.0
         num_correct = 0
         num_images = 0
@@ -210,9 +255,16 @@ class Trainer(object):
             num_correct += (pred == target).sum().item()
             num_images += images.size(0)
 
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
+            if self.args.wsol_method == 'nts':
+                for opt in self.optimizer:
+                    opt.zero_grad()
+                loss.backward()
+                for opt in self.optimizer:
+                    opt.setup()
+            else:
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
 
         loss_average = total_loss / float(num_images)
         classification_acc = num_correct / float(num_images) * 100
