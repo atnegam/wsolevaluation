@@ -2,10 +2,12 @@ from torch import nn
 import torch
 import torch.nn.functional as F
 from torch.autograd import Variable
-from core import resnet
+from . import resnet
 import numpy as np
-from core.anchors import generate_default_anchor_maps, hard_nms
-from config import CAT_NUM, PROPOSAL_NUM
+from .anchors import generate_default_anchor_maps, hard_nms
+# from config import CAT_NUM, PROPOSAL_NUM
+CAT_NUM = 4
+PROPOSAL_NUM = 6
 
 
 class ProposalNet(nn.Module):
@@ -70,7 +72,7 @@ class attention_net(nn.Module):
                 part_imgs[i:i + 1, j] = F.interpolate(x_pad[i:i + 1, :, y0:y1, x0:x1], size=(224, 224), mode='bilinear',
                                                       align_corners=True)
         part_imgs = part_imgs.view(batch * self.topN, 3, 224, 224)
-        _, _, part_features = self.pretrained_model(part_imgs.detach())
+        _, _, part_features = self.pretrained_model(part_imgs.detach(), target)
         part_feature = part_features.view(batch, self.topN, -1)
         part_feature = part_feature[:, :CAT_NUM, ...].contiguous()
         part_feature = part_feature.view(batch, -1)

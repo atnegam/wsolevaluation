@@ -170,9 +170,9 @@ def get_configs():
                         help='Use pre_trained model.')
     parser.add_argument('--cam_curve_interval', type=float, default=.001,
                         help='CAM curve interval')
-    parser.add_argument('--resize_size', type=int, default=256,
+    parser.add_argument('--resize_size', type=int, default=600,
                         help='input resize size')
-    parser.add_argument('--crop_size', type=int, default=224,
+    parser.add_argument('--crop_size', type=int, default=448,
                         help='input crop size')
     parser.add_argument('--multi_contour_eval', type=str2bool, nargs='?',
                         const=True, default=True)
@@ -186,7 +186,7 @@ def get_configs():
                         const=True, default=True)
 
     # Common hyperparameters
-    parser.add_argument('--batch_size', default=64, type=int,
+    parser.add_argument('--batch_size', default=16, type=int,
                         help='Mini-batch size (default: 256), this is the total'
                              'batch size of all GPUs on the current node when'
                              'using Data Parallel or Distributed Data Parallel')
@@ -205,7 +205,7 @@ def get_configs():
                         const=True, default=False)
 
     # Method-specific hyperparameters
-    parser.add_argument('--wsol_method', type=str, default='adl',
+    parser.add_argument('--wsol_method', type=str, default='nts',
                         choices=_METHOD_NAMES)
     parser.add_argument('--has_grid_size', type=int, default=4)
     parser.add_argument('--has_drop_rate', type=float, default=0.5)

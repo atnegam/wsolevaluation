@@ -123,7 +123,7 @@ class Trainer(object):
         print("Loading model {}".format(self.args.architecture))
         
         if self.args.wsol_method == 'nts':
-            model = net.attention_net()
+            model = net.attention_net(topN=6, return_cam=)
         else:
             model = wsol.__dict__[self.args.architecture](
                 dataset_name=self.args.dataset_name,
@@ -304,8 +304,11 @@ class Trainer(object):
         for i, (images, targets, image_ids) in enumerate(loader):
             images = images.cuda()
             targets = targets.cuda()
-            output_dict = self.model(images)
-            pred = output_dict['logits'].argmax(dim=1)
+            output_dict = self.model(images, targets)
+            if self.args.wsol_method == 'nts':
+                pred = output_dict[1].argmax(dim=1)
+            else:
+                pred = output_dict['logits'].argmax(dim=1)
 
             num_correct += (pred == targets).sum().item()
             num_images += images.size(0)
