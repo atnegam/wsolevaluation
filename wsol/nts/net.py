@@ -33,9 +33,9 @@ class ProposalNet(nn.Module):
 
 
 class attention_net(nn.Module):
-    def __init__(self, topN=4, return_cam=False):
+    def __init__(self, topN=4):
         super(attention_net, self).__init__()
-        self.return_cam = return_cam
+        # self.return_cam = return_cam
         self.pretrained_model = resnet.resnet50(pretrained=True)
         self.pretrained_model.avgpool = nn.AdaptiveAvgPool2d(1)
         self.pretrained_model.fc = nn.Linear(512 * 4, 200)
@@ -47,8 +47,8 @@ class attention_net(nn.Module):
         self.pad_side = 224
         self.edge_anchors = (edge_anchors + 224).astype(np.int)
 
-    def forward(self, x, target):
-        if self.return_cam:
+    def forward(self, x, target, return_cam=False):
+        if return_cam:
             cams = self.pretrained_model(x, target)
             return cams
         else:

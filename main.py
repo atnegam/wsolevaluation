@@ -123,7 +123,7 @@ class Trainer(object):
         print("Loading model {}".format(self.args.architecture))
         
         if self.args.wsol_method == 'nts':
-            model = net.attention_net(topN=6, return_cam=)
+            model = net.attention_net(topN=6)
         else:
             model = wsol.__dict__[self.args.architecture](
                 dataset_name=self.args.dataset_name,
