@@ -77,12 +77,12 @@ class Trainer(object):
     }
 
     def __init__(self):
-        self.args = get_configs()
+        self.args = get_configs()               #get args
         set_random_seed(self.args.seed)
         print(self.args)
         self.performance_meters = self._set_performance_meters()
         self.reporter = self.args.reporter
-        self.model = self._set_model()
+        self.model = self._set_model()          #init model
         self.cross_entropy_loss = nn.CrossEntropyLoss().cuda()
         self.optimizer = self._set_optimizer()
         self.loaders = get_data_loader(
