@@ -143,11 +143,11 @@ def get_configs():
     parser.add_argument('--dataset_name', type=str, default='CUB',
                         choices=_DATASET_NAMES)
     parser.add_argument('--data_root', metavar='/PATH/TO/DATASET',
-                        default='dataset/',
+                        default='../dataset',
                         help='path to dataset images')
     parser.add_argument('--metadata_root', type=str, default='metadata/')
     parser.add_argument('--mask_root', metavar='/PATH/TO/MASKS',
-                        default='dataset/',
+                        default='../dataset',
                         help='path to masks')
     parser.add_argument('--proxy_training_set', type=str2bool, nargs='?',
                         const=True, default=False,
@@ -158,7 +158,7 @@ def get_configs():
                              'class. 0 means "use all available samples".')
 
     # Setting
-    parser.add_argument('--architecture', default='resnet18',
+    parser.add_argument('--architecture', default='resnet50',
                         choices=_ARCHITECTURE_NAMES,
                         help='model architecture: ' +
                              ' | '.join(_ARCHITECTURE_NAMES) +
@@ -205,7 +205,7 @@ def get_configs():
                         const=True, default=False)
 
     # Method-specific hyperparameters
-    parser.add_argument('--wsol_method', type=str, default='base',
+    parser.add_argument('--wsol_method', type=str, default='adl',
                         choices=_METHOD_NAMES)
     parser.add_argument('--has_grid_size', type=int, default=4)
     parser.add_argument('--has_drop_rate', type=float, default=0.5)
