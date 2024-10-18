@@ -190,7 +190,7 @@ def get_configs():
                         help='Mini-batch size (default: 256), this is the total'
                              'batch size of all GPUs on the current node when'
                              'using Data Parallel or Distributed Data Parallel')
-    parser.add_argument('--lr', default=0.01, type=float,
+    parser.add_argument('--lr', default=0.001, type=float,
                         help='initial learning rate', dest='lr')
     parser.add_argument('--lr_decay_frequency', type=int, default=30,
                         help='How frequently do we decay the learning rate?')
