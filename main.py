@@ -200,7 +200,8 @@ class Trainer(object):
             partcls_loss = self.cross_entropy_loss(part_logits.view(self.args.batch_size * self.args.PROPOSAL_NUM, -1),
                                     target.unsqueeze(1).repeat(1, self.args.PROPOSAL_NUM).view(-1))
             loss = raw_loss + rank_loss + concat_loss + partcls_loss
-            return concat_logits, loss
+            # return concat_logits, loss
+            return raw_logits, raw_loss
 
         if (self.args.wsol_method == 'cutmix' and
                 self.args.cutmix_prob > np.random.rand(1) and
