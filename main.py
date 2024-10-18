@@ -247,6 +247,10 @@ class Trainer(object):
 
             if batch_idx % int(len(loader) / 10) == 0:
                 print(" iteration ({} / {})".format(batch_idx + 1, len(loader)))
+            
+            if self.args.wsol_method == 'nts':
+                for opt in self.optimizer:
+                    opt.zero_grad()
 
             logits, loss = self._wsol_training(images, target)
             pred = logits.argmax(dim=1)
@@ -256,8 +260,6 @@ class Trainer(object):
             num_images += images.size(0)
 
             if self.args.wsol_method == 'nts':
-                for opt in self.optimizer:
-                    opt.zero_grad()
                 loss.backward()
                 for opt in self.optimizer:
                     opt.step()
@@ -272,6 +274,10 @@ class Trainer(object):
         self.performance_meters[split]['classification'].update(
             classification_acc)
         self.performance_meters[split]['loss'].update(loss_average)
+        
+        # debug
+        print("fuck_class_acc: {0}".format(classification_acc))
+        print("fuck_loss: {0}".format(loss_average))
 
         return dict(classification_acc=classification_acc,
                     loss=loss_average)
