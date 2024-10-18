@@ -49,7 +49,7 @@ class attention_net(nn.Module):
 
     def forward(self, x, target, return_cam=False):
         if return_cam:
-            cams = self.pretrained_model(x, target)
+            cams = self.pretrained_model(x, target, return_cam)
             return cams
         else:
             resnet_out, rpn_feature, feature = self.pretrained_model(x, target)

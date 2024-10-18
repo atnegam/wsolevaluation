@@ -186,7 +186,7 @@ def get_configs():
                         const=True, default=True)
 
     # Common hyperparameters
-    parser.add_argument('--batch_size', default=16, type=int,
+    parser.add_argument('--batch_size', default=9, type=int,
                         help='Mini-batch size (default: 256), this is the total'
                              'batch size of all GPUs on the current node when'
                              'using Data Parallel or Distributed Data Parallel')
@@ -203,7 +203,8 @@ def get_configs():
                         dest='weight_decay')
     parser.add_argument('--large_feature_map', type=str2bool, nargs='?',
                         const=True, default=False)
-
+    parser.add_argument('--PROPOSAL_NUM', type=int, default=6)
+    
     # Method-specific hyperparameters
     parser.add_argument('--wsol_method', type=str, default='nts',
                         choices=_METHOD_NAMES)

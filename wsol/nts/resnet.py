@@ -92,8 +92,8 @@ class Bottleneck(nn.Module):
 
 
 class ResNet(nn.Module):
-    def __init__(self, block, layers, num_classes=1000, return_cam=False):
-        self.return_cam = return_cam
+    def __init__(self, block, layers, num_classes=1000):
+        # self.return_cam = return_cam
         self.inplanes = 64
         super(ResNet, self).__init__()
         self.conv1 = nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3,
@@ -133,7 +133,7 @@ class ResNet(nn.Module):
 
         return nn.Sequential(*layers)
 
-    def forward(self, x, target):
+    def forward(self, x, target, return_cam=False):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
@@ -150,7 +150,7 @@ class ResNet(nn.Module):
         feature2 = x
         x = self.fc(x)
 
-        if self.return_cam:
+        if return_cam:
             feature_map = feature1.detach().clone()
             cam_weights = self.fc.weight[target]
             cams = (cam_weights.view(*feature_map.shape[:2], 1, 1) *

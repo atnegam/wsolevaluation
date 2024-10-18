@@ -191,9 +191,9 @@ class Trainer(object):
 
     def _wsol_training(self, images, target):
         if self.args.wsol_method == 'nts':
-            raw_logits, concat_logits, part_logits, _, top_n_prob = self.model(images)
+            raw_logits, concat_logits, part_logits, _, top_n_prob = self.model(images, target)
             part_loss = net.list_loss(part_logits.view(self.args.batch_size * self.args.PROPOSAL_NUM, -1),
-                                        target.unsqueeze(1).repeat(1, self.args.PROPOSAL_NUM).view(-1)).view(batch_size, PROPOSAL_NUM)
+                                        target.unsqueeze(1).repeat(1, self.args.PROPOSAL_NUM).view(-1)).view(self.args.batch_size, self.args.PROPOSAL_NUM)
             raw_loss = self.cross_entropy_loss(raw_logits, target)
             concat_loss = self.cross_entropy_loss(concat_logits, target)
             rank_loss = net.ranking_loss(top_n_prob, part_loss)
@@ -260,7 +260,7 @@ class Trainer(object):
                     opt.zero_grad()
                 loss.backward()
                 for opt in self.optimizer:
-                    opt.setup()
+                    opt.step()
             else:
                 self.optimizer.zero_grad()
                 loss.backward()
@@ -412,23 +412,23 @@ def main():
     trainer = Trainer()
 
     print("===========================================================")
-    print("Start epoch 0 ...")
-    trainer.evaluate(epoch=0, split='val')
-    trainer.print_performances()
-    trainer.report(epoch=0, split='val')
-    trainer.save_checkpoint(epoch=0, split='val')
+    # print("Start epoch 0 ...")
+    # trainer.evaluate(epoch=0, split='val')
+    # trainer.print_performances()
+    # trainer.report(epoch=0, split='val')
+    # trainer.save_checkpoint(epoch=0, split='val')
     print("Epoch 0 done.")
 
     for epoch in range(trainer.args.epochs):
         print("===========================================================")
         print("Start epoch {} ...".format(epoch + 1))
-        trainer.adjust_learning_rate(epoch + 1)
+        # trainer.adjust_learning_rate(epoch + 1)
         train_performance = trainer.train(split='train')
         trainer.report_train(train_performance, epoch + 1, split='train')
         trainer.evaluate(epoch + 1, split='val')
         trainer.print_performances()
         trainer.report(epoch + 1, split='val')
-        trainer.save_checkpoint(epoch + 1, split='val')
+        # trainer.save_checkpoint(epoch + 1, split='val')
         print("Epoch {} done.".format(epoch + 1))
 
     print("===========================================================")
